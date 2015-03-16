@@ -1,0 +1,37 @@
+require 'spec_helper'
+require "logstash/filters/geocoder"
+require "geocoder"
+
+describe LogStash::Filters::Geocoder do
+
+  config <<-CONFIG
+    filter {
+      geocoder { }
+    }
+  CONFIG
+
+  sample "Lisbon, Portugal" do
+    expect(Geocoder).to receive(:coordinates).with("Lisbon, Portugal")
+    insist { subject["geo"] }.nil?
+  end
+
+  context "when the location doesn't exist" do
+    sample "Endor" do
+      expect(Geocoder).to receive(:coordinates).with("Endor").and_return(nil)
+      insist { subject["tags"] } == ["_geocode_notfound"]
+    end
+  end
+
+  context "when search raises an exception" do
+    sample "Lisbon" do
+      expect(Geocoder).to receive(:coordinates).and_raise RuntimeError
+      insist { subject["tags"] } == ["_geocode_failure"]
+    end
+  end
+
+  context "when using lru_cache" do
+    sample "Lisbon" do
+      expect(Geocoder).to receive(:coordinates).and_raise RuntimeError
+      insist { subject["tags"] } == ["_geocode_failure"]
+    end
+end
