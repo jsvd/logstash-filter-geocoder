@@ -12,10 +12,12 @@ class LogStash::Filters::Geocoder < LogStash::Filters::Base
   # target field to set the coordinates
   config :target, :validate => :string, :default => "geo"
 
-  # geocoder search provider
+  # geocoder search provider. choose yandex or google
+  # others can be supported if an api key config is added
   config :lookup, :validate => ["yandex", "google"], :default => "google"
 
-  # geocoder search provider
+  # cache a certain amount of search results. 0 to disable
+  # uses a LRU cache library: https://github.com/SamSaffron/lru_redux
   config :cache_size, :validate => :number, :default => 0
 
   public
@@ -23,7 +25,8 @@ class LogStash::Filters::Geocoder < LogStash::Filters::Base
     require "geocoder"
     Geocoder.configure(:lookup => @lookup.to_sym)
     if @cache_size > 0
-      Geocoder.configure(:cache => LruRedux::ThreadSafeCache.new(@cache_size))
+      require 'lru_redux'
+      Geocoder.configure(:cache => ::LruRedux::ThreadSafeCache.new(@cache_size))
     end
   end # def register
 

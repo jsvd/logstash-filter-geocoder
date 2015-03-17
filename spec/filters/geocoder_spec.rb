@@ -1,6 +1,7 @@
 require 'spec_helper'
 require "logstash/filters/geocoder"
 require "geocoder"
+require 'lru_redux'
 
 describe LogStash::Filters::Geocoder do
 
@@ -30,8 +31,18 @@ describe LogStash::Filters::Geocoder do
   end
 
   context "when using lru_cache" do
-    sample "Lisbon" do
-      expect(Geocoder).to receive(:coordinates).and_raise RuntimeError
-      insist { subject["tags"] } == ["_geocode_failure"]
+    cache_size = 2
+    cache_class = ::LruRedux::ThreadSafeCache
+    config <<-CONFIG
+      filter {
+        geocoder { cache_size => #{cache_size} }
+      }
+    CONFIG
+    sample ["Lisbon, Portugal"] * 2 do
+      cache = cache_class.new(cache_size)
+      expect(cache_class).to receive(:new).with(cache_size).and_return(cache)
+      expect(cache).to receive(:[]=).once.and_call_original
+      insist { subject.size } == 2
     end
+  end
 end
