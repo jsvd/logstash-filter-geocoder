@@ -32,18 +32,14 @@ class LogStash::Filters::Geocoder < LogStash::Filters::Base
 
   public
   def filter(event)
-    begin
-      coordinates = Geocoder.coordinates(event[@source])
-    rescue => e
-      event.tag("_geocode_failure")
-      return
-    end
-
+    coordinates = Geocoder.coordinates(event[@source])
     if coordinates
       event[@target] = coordinates
       filter_matched(event)
     else
       event.tag("_geocode_notfound")
     end
+  rescue => e
+    event.tag("_geocode_failure")
   end # def filter
 end # class LogStash::Filters::Geocoder
